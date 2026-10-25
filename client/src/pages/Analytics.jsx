@@ -62,7 +62,13 @@ export default function Analytics() {
       if (overviewRes?.overview) setOverview(overviewRes.overview);
       if (trendsRes?.trends) setTrends(trendsRes.trends);
       if (catsRes?.categories) setCategories(catsRes.categories);
-      if (streakRes) setStreak(streakRes);
+      const streakObj = streakRes?.streak || streakRes;
+      if (streakObj) {
+        setStreak({
+          current: streakObj.current ?? streakObj.currentStreak ?? 0,
+          longest: streakObj.longest ?? streakObj.longestStreak ?? 0
+        });
+      }
     } catch (err) {
       console.error('Error fetching analytics:', err);
       addToast('Failed to load some analytics data', 'warning');
@@ -152,8 +158,8 @@ export default function Analytics() {
           <div className="stat-icon" style={{ background: 'rgba(108, 99, 255, 0.15)', color: 'var(--accent-primary)' }}>
             <HiOutlineFire />
           </div>
-          <div className="stat-value">{streak.currentStreak || 0} <span style={{ fontSize: '1rem', fontWeight: 400 }}>days</span></div>
-          <div className="stat-label">Active Streak (Best: {streak.longestStreak || 0}d)</div>
+          <div className="stat-value">{(streak.current ?? streak.currentStreak ?? 0)} <span style={{ fontSize: '1rem', fontWeight: 400 }}>days</span></div>
+          <div className="stat-label">Active Streak (Best: {(streak.longest ?? streak.longestStreak ?? 0)}d)</div>
         </div>
 
         <div className="glass-card stat-card">

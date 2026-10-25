@@ -13,7 +13,13 @@ router.get('/', async (req, res) => {
 
     const filter = { userId: req.userId };
 
-    if (status) filter.status = status;
+    if (status) {
+      if (status === 'active' || status === 'pending') {
+        filter.status = { $ne: 'done' };
+      } else {
+        filter.status = status;
+      }
+    }
     if (quadrant) filter.quadrant = quadrant;
     if (category) filter.category = category;
     if (search) {
@@ -264,6 +270,14 @@ router.put('/:id', async (req, res) => {
         updates[field] = req.body[field];
       }
     }
+
+    // Sanitize empty strings and types to prevent Mongoose cast errors
+    if (updates.deadline === '' || updates.deadline === 'Invalid Date') updates.deadline = null;
+    if (updates.estimatedMinutes === '' || updates.estimatedMinutes === null) updates.estimatedMinutes = null;
+    if (updates.dailyQuotaMinutes !== undefined) updates.dailyQuotaMinutes = Number(updates.dailyQuotaMinutes) || 0;
+    if (updates.reminderLeadTime !== undefined) updates.reminderLeadTime = Number(updates.reminderLeadTime) || 15;
+    if (updates.priority !== undefined) updates.priority = Number(updates.priority) || 3;
+    if (updates.urgency !== undefined) updates.urgency = Number(updates.urgency) || 3;
 
     const task = await Task.findOne({ _id: req.params.id, userId: req.userId });
     if (!task) {

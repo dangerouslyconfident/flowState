@@ -25,11 +25,11 @@ export default function Dashboard() {
       const [overviewData, streakData, tasksData] = await Promise.all([
         analyticsApi.overview(),
         analyticsApi.streak(),
-        tasksApi.list({ status: 'todo', sort: '-priority', limit: 5 })
+        tasksApi.list({ status: 'pending', sort: '-priority', limit: 6 })
       ]);
       setOverview(overviewData.overview);
       setStreak(streakData.streak);
-      setRecentTasks(tasksData.tasks);
+      setRecentTasks(tasksData.tasks || []);
     } catch (err) {
       addToast('Failed to load dashboard', 'error');
     } finally {

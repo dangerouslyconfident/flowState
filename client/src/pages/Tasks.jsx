@@ -122,7 +122,14 @@ export default function Tasks() {
     }
   };
 
-  const getQuadrantTasks = (quadrant) => tasks.filter(t => t.quadrant === quadrant && t.status !== 'done');
+  const getQuadrantTasks = (quadrant) => {
+    return tasks.filter(t => {
+      if (t.quadrant !== quadrant) return false;
+      if (filterStatus === 'done') return t.status === 'done';
+      if (filterStatus === 'all' || filterStatus === '') return t.status !== 'done';
+      return t.status === filterStatus;
+    });
+  };
 
   if (loading) {
     return <div className="loading-spinner"><div className="spinner" /></div>;

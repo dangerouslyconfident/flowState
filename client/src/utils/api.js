@@ -86,6 +86,7 @@ export const sessionsApi = {
   start: (data) => request('/sessions/start', { method: 'POST', body: data }),
   end: (id, data) => request(`/sessions/${id}/end`, { method: 'PUT', body: data }),
   getActive: () => request('/sessions/active'),
+  cancelActive: () => request('/sessions/active', { method: 'DELETE' }),
   list: (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return request(`/sessions${query ? '?' + query : ''}`);

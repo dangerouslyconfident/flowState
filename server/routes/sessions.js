@@ -25,16 +25,15 @@ router.post('/start', async (req, res) => {
       taskTitle = task.title;
     }
 
-    // Check for existing active session
+    // Auto-close any existing uncompleted active session so the user is never locked out
     const activeSession = await FocusSession.findOne({
       userId: req.userId,
       endTime: null
     });
     if (activeSession) {
-      return res.status(409).json({ 
-        error: 'You already have an active session. End it before starting a new one.',
-        activeSession 
-      });
+      activeSession.endTime = new Date();
+      activeSession.completed = false;
+      await activeSession.save();
     }
 
     const session = new FocusSession({
@@ -209,6 +208,28 @@ router.get('/active', async (req, res) => {
   }
 });
 
+// DELETE /api/sessions/active - Abandon / cancel active session
+router.delete('/active', async (req, res) => {
+  try {
+    const session = await FocusSession.findOne({
+      userId: req.userId,
+      endTime: null
+    });
+
+    if (session) {
+      session.endTime = new Date();
+      session.completed = false;
+      await session.save();
+      return res.json({ message: 'Active session cancelled.', session });
+    }
+
+    res.json({ message: 'No active session found.' });
+  } catch (error) {
+    console.error('Cancel active session error:', error);
+    res.status(500).json({ error: 'Failed to cancel active session.' });
+  }
+});
+
 // GET /api/sessions - List sessions with date filtering
 router.get('/', async (req, res) => {
   try {
@@ -242,7 +263,10 @@ router.get('/stats', async (req, res) => {
 
     let startDate = new Date();
     switch (period) {
-      case '24h': startDate.setDate(startDate.getDate() - 1); break;
+      case 'today':
+      case '24h':
+        startDate.setHours(0, 0, 0, 0);
+        break;
       case '7d': startDate.setDate(startDate.getDate() - 7); break;
       case '30d': startDate.setDate(startDate.getDate() - 30); break;
       default: startDate.setDate(startDate.getDate() - 7);
@@ -277,16 +301,21 @@ router.get('/stats', async (req, res) => {
       avgDuration: 0
     };
 
+    const totalMinutes = Math.round(result.totalDuration / 60);
+
     res.json({
       stats: {
         totalSessions: result.totalSessions,
-        totalMinutes: Math.round(result.totalDuration / 60),
+        totalMinutes,
         completedSessions: result.completedSessions,
         completionRate: result.totalSessions > 0
           ? Math.round((result.completedSessions / result.totalSessions) * 100)
           : 0,
         avgMinutes: Math.round(result.avgDuration / 60)
-      }
+      },
+      totalSessions: result.totalSessions,
+      totalMinutes,
+      completedSessions: result.completedSessions
     });
   } catch (error) {
     console.error('Session stats error:', error);

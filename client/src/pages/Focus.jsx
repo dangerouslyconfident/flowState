@@ -55,27 +55,43 @@ export default function Focus() {
     }
   }, [location.search]);
 
-  // Load pending tasks and recent stats
+  // Load pending tasks, recent stats, and rehydrate any active session
   useEffect(() => {
     async function loadData() {
       try {
-        const [taskList, statsData] = await Promise.all([
-          tasksApi.list({ status: 'todo' }),
-          sessionsApi.stats('today').catch(() => ({ totalSessions: 0, totalMinutes: 0 }))
+        const [taskList, statsData, activeData] = await Promise.all([
+          tasksApi.list({ status: 'pending' }),
+          sessionsApi.stats('today').catch(() => null),
+          sessionsApi.getActive().catch(() => null)
         ]);
         setTasks(taskList.tasks || []);
         if (statsData) {
-          setSessionStats({
-            totalSessions: statsData.totalSessions || 0,
-            totalMinutes: statsData.totalMinutes || 0
-          });
+          const totalSessions = statsData?.stats?.totalSessions ?? statsData?.totalSessions ?? 0;
+          const totalMinutes = statsData?.stats?.totalMinutes ?? statsData?.totalMinutes ?? 0;
+          setSessionStats({ totalSessions, totalMinutes });
+        }
+
+        // Rehydrate active session if still within planned duration
+        if (activeData?.session && !activeData.session.endTime && activeData.session.type === 'work') {
+          const sess = activeData.session;
+          const elapsed = Math.floor((Date.now() - new Date(sess.startTime).getTime()) / 1000);
+          const remaining = (sess.plannedDuration || pomoDuration) - elapsed;
+          if (remaining > 5) {
+            setCurrentSessionId(sess._id);
+            if (sess.taskId?._id || sess.taskId) {
+              setSelectedTaskId(sess.taskId?._id || sess.taskId);
+            }
+            setTimeLeft(remaining);
+          } else {
+            sessionsApi.cancelActive().catch(() => {});
+          }
         }
       } catch (err) {
         console.error('Error fetching tasks or stats:', err);
       }
     }
     loadData();
-  }, []);
+  }, [pomoDuration]);
 
   // Update total duration when mode changes
   const getTotalDuration = useCallback((m) => {
@@ -134,12 +150,21 @@ export default function Focus() {
     window.dispatchEvent(new CustomEvent('flowstate:focus_stop'));
   };
 
-  // Reset timer
-  const resetTimer = () => {
+  // Reset timer & cancel active session
+  const resetTimer = async () => {
     setIsRunning(false);
     clearInterval(timerRef.current);
     setTimeLeft(getTotalDuration(mode));
     window.dispatchEvent(new CustomEvent('flowstate:focus_stop'));
+
+    if (currentSessionId) {
+      try {
+        await sessionsApi.cancelActive();
+      } catch (err) {
+        console.warn('Failed to cancel active session on reset:', err);
+      }
+      setCurrentSessionId(null);
+    }
   };
 
   // Complete / Finish Session

@@ -34,6 +34,10 @@ const connectDB = async () => {
     const memoryUri = memoryServer.getUri();
     const conn = await mongoose.connect(memoryUri);
     console.log(`🚀 In-Memory MongoDB engine active (${conn.connection.host}). Zero-config instant local dev enabled!`);
+    
+    // Auto-seed demo user and tasks
+    const seedDefaultData = require('../utils/seed');
+    await seedDefaultData();
   } catch (error) {
     console.error('❌ Failed to initialize MongoDB engine:', error.message);
   }
