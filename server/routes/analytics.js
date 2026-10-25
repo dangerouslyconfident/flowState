@@ -57,6 +57,56 @@ router.get('/overview', async (req, res) => {
       { $group: { _id: null, total: { $sum: '$duration' } } }
     ]);
 
+    // Daily Quotas calculation
+    const quotaTasks = await Task.find({
+      userId,
+      status: { $ne: 'done' },
+      dailyQuotaMinutes: { $gt: 0 }
+    });
+    const todayStr = todayStart.toISOString().split('T')[0];
+    let totalQuotaAllocatedToday = 0;
+    let totalQuotaLoggedToday = 0;
+    quotaTasks.forEach(t => {
+      totalQuotaAllocatedToday += t.dailyQuotaMinutes || 0;
+      const h = t.dailyQuotaHistory?.find(e => e.date === todayStr);
+      totalQuotaLoggedToday += h ? h.minutesLogged : (t.todayFocusMinutes || 0);
+    });
+
+    // Distraction Interceptions
+    const todayDistractions = await FocusSession.aggregate([
+      {
+        $match: {
+          userId,
+          startTime: { $gte: todayStart }
+        }
+      },
+      { $unwind: '$distractions' },
+      { $count: 'total' }
+    ]);
+
+    const totalDistractions = await FocusSession.aggregate([
+      { $match: { userId } },
+      { $unwind: '$distractions' },
+      { $count: 'total' }
+    ]);
+
+    const totalWorkSessions = await FocusSession.countDocuments({
+      userId,
+      type: 'work',
+      endTime: { $ne: null }
+    });
+
+    const cleanSessions = await FocusSession.countDocuments({
+      userId,
+      type: 'work',
+      endTime: { $ne: null },
+      distractionCount: { $eq: 0 }
+    });
+
+    const distractionResistance = totalWorkSessions > 0
+      ? Math.round((cleanSessions / totalWorkSessions) * 100)
+      : 100;
+
     res.json({
       overview: {
         tasks: {
@@ -71,6 +121,18 @@ router.get('/overview', async (req, res) => {
         focus: {
           todayMinutes: Math.round((todayFocus[0]?.total || 0) / 60),
           weekMinutes: Math.round((weekFocus[0]?.total || 0) / 60)
+        },
+        dailyQuota: {
+          allocatedMinutes: totalQuotaAllocatedToday,
+          loggedMinutes: totalQuotaLoggedToday,
+          complianceRate: totalQuotaAllocatedToday > 0 
+            ? Math.min(100, Math.round((totalQuotaLoggedToday / totalQuotaAllocatedToday) * 100))
+            : 100
+        },
+        distractions: {
+          todayBlocked: todayDistractions[0]?.total || 0,
+          totalBlocked: totalDistractions[0]?.total || 0,
+          resistanceScore: distractionResistance
         }
       }
     });

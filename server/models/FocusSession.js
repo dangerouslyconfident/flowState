@@ -43,7 +43,21 @@ const focusSessionSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'Notes cannot exceed 1000 characters'],
     default: ''
-  }
+  },
+  taskTitle: {
+    type: String,
+    default: ''
+  },
+  distractionCount: {
+    type: Number,
+    default: 0
+  },
+  distractions: [{
+    site: { type: String, required: true },
+    url: { type: String, default: '' },
+    timestamp: { type: Date, default: Date.now },
+    action: { type: String, enum: ['blocked', 'warned', 'tab_blur'], default: 'warned' }
+  }]
 }, {
   timestamps: true
 });

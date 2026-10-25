@@ -107,7 +107,21 @@ router.put('/profile', auth, async (req, res) => {
 
     if (name) updates.name = name;
     if (settings) {
-      const allowedSettings = ['pomoDuration', 'shortBreak', 'longBreak', 'longBreakInterval', 'dailyGoalMinutes', 'theme'];
+      const allowedSettings = [
+        'pomoDuration', 
+        'shortBreak', 
+        'longBreak', 
+        'longBreakInterval', 
+        'dailyGoalMinutes', 
+        'dailyFocusQuota',
+        'theme',
+        'notificationsEnabled',
+        'soundEnabled',
+        'reminderLeadMinutes',
+        'distractionMode',
+        'distractionAlertMessage',
+        'blacklistedSites'
+      ];
       const sanitizedSettings = {};
       for (const key of allowedSettings) {
         if (settings[key] !== undefined) {
@@ -127,6 +141,20 @@ router.put('/profile', auth, async (req, res) => {
   } catch (error) {
     console.error('Profile update error:', error);
     res.status(500).json({ error: 'Failed to update profile.' });
+  }
+});
+
+// GET /api/auth/blacklist - Direct fast fetch for Extension and Guardian Guard
+router.get('/blacklist', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    res.json({
+      blacklistedSites: user.settings?.blacklistedSites || [],
+      distractionMode: user.settings?.distractionMode || 'warning',
+      distractionAlertMessage: user.settings?.distractionAlertMessage || 'Stay on task! Wavering is not an option.'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch blacklist.' });
   }
 });
 

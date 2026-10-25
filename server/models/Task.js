@@ -80,6 +80,53 @@ const taskSchema = new mongoose.Schema({
   completedAt: {
     type: Date,
     default: null
+  },
+  // Versatile Focus Quota & Daily Allocation
+  dailyQuotaMinutes: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 1440
+  },
+  focusSlots: [{
+    startTime: { type: String, default: '09:00' }, // HH:mm
+    endTime: { type: String, default: '10:00' },   // HH:mm
+    dayOfWeek: { type: String, default: 'all' }    // all | weekdays | weekends | monday, etc.
+  }],
+  targetCompletionTime: {
+    type: String, // HH:mm or full ISO date
+    default: ''
+  },
+  reminderLeadTime: {
+    type: Number, // minutes before due date / slot: 0, 15, 30, 60
+    default: 15
+  },
+  reminded: {
+    type: Boolean,
+    default: false
+  },
+  recurring: {
+    enabled: { type: Boolean, default: false },
+    frequency: { 
+      type: String, 
+      enum: ['none', 'daily', 'weekdays', 'weekly'], 
+      default: 'none' 
+    }
+  },
+  todayFocusMinutes: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  dailyQuotaHistory: [{
+    date: { type: String }, // YYYY-MM-DD
+    minutesLogged: { type: Number, default: 0 },
+    quotaTarget: { type: Number, default: 0 }
+  }],
+  distractionCount: {
+    type: Number,
+    default: 0,
+    min: 0
   }
 }, {
   timestamps: true

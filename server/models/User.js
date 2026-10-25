@@ -28,7 +28,31 @@ const userSchema = new mongoose.Schema({
     longBreak: { type: Number, default: 15 },       // minutes
     longBreakInterval: { type: Number, default: 4 }, // sessions before long break
     dailyGoalMinutes: { type: Number, default: 120 },
-    theme: { type: String, default: 'dark', enum: ['dark', 'light'] }
+    dailyFocusQuota: { type: Number, default: 180 }, // total minutes per day
+    theme: { type: String, default: 'dark', enum: ['dark', 'light'] },
+    notificationsEnabled: { type: Boolean, default: true },
+    soundEnabled: { type: Boolean, default: true },
+    reminderLeadMinutes: { type: Number, default: 15 },
+    distractionMode: { type: String, default: 'warning', enum: ['warning', 'strict', 'zen'] },
+    distractionAlertMessage: { 
+      type: String, 
+      default: 'Stay on task! Wavering is not an option when greatness is being built.' 
+    },
+    blacklistedSites: {
+      type: [String],
+      default: [
+        'youtube.com',
+        'reddit.com',
+        'twitter.com',
+        'x.com',
+        'instagram.com',
+        'facebook.com',
+        'tiktok.com',
+        'netflix.com',
+        'twitch.tv',
+        'discord.com'
+      ]
+    }
   }
 }, {
   timestamps: true
