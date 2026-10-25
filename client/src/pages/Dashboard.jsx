@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { analyticsApi, tasksApi, aiApi } from '../utils/api';
-import { HiOutlineCheckCircle, HiOutlineClock, HiOutlineFire, HiOutlineExclamation, HiOutlineLightningBolt, HiOutlineSparkles } from 'react-icons/hi';
+import { HiOutlineCheckCircle, HiOutlineClock, HiOutlineFire, HiOutlineExclamation, HiOutlineLightningBolt, HiOutlineSparkles, HiOutlineShieldCheck } from 'react-icons/hi';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -78,13 +78,13 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="stats-grid">
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
         <div className="stat-card glass-card" id="stat-completed">
           <div className="stat-icon" style={{ background: 'rgba(52, 211, 153, 0.15)', color: 'var(--success)' }}>
             <HiOutlineCheckCircle />
           </div>
           <div className="stat-value">{stats.todayCompleted || 0}</div>
-          <div className="stat-label">Completed Today</div>
+          <div className="stat-label">Tasks Done Today</div>
         </div>
 
         <div className="stat-card glass-card" id="stat-focus">
@@ -95,20 +95,33 @@ export default function Dashboard() {
           <div className="stat-label">Focus Time Today</div>
         </div>
 
+        <div className="stat-card glass-card" id="stat-quota">
+          <div className="stat-icon" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38BDF8' }}>
+            <HiOutlineLightningBolt />
+          </div>
+          <div className="stat-value">
+            {overview?.dailyQuota?.loggedMinutes || 0}/{overview?.dailyQuota?.allocatedMinutes || 0}
+            <span className="text-sm text-secondary">m</span>
+          </div>
+          <div className="stat-label">Daily Focus Quota ({overview?.dailyQuota?.complianceRate || 0}%)</div>
+        </div>
+
+        <div className="stat-card glass-card" id="stat-resistance">
+          <div className="stat-icon" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#F87171' }}>
+            <HiOutlineShieldCheck />
+          </div>
+          <div className="stat-value">
+            {overview?.distractions?.resistanceScore !== undefined ? overview.distractions.resistanceScore : 100}%
+          </div>
+          <div className="stat-label">Focus Shield ({overview?.distractions?.todayBlocked || 0} Thwarted)</div>
+        </div>
+
         <div className="stat-card glass-card" id="stat-streak">
           <div className="stat-icon" style={{ background: 'rgba(251, 191, 36, 0.15)', color: 'var(--warning)' }}>
             <HiOutlineFire />
           </div>
           <div className="stat-value">{streak?.current || 0}</div>
-          <div className="stat-label">Day Streak</div>
-        </div>
-
-        <div className="stat-card glass-card" id="stat-pending">
-          <div className="stat-icon" style={{ background: 'rgba(248, 113, 113, 0.15)', color: 'var(--danger)' }}>
-            <HiOutlineExclamation />
-          </div>
-          <div className="stat-value">{stats.overdue || 0}</div>
-          <div className="stat-label">Overdue Tasks</div>
+          <div className="stat-label">Day Streak 🔥</div>
         </div>
       </div>
 

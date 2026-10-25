@@ -59,7 +59,8 @@ export const authApi = {
   login: (data) => request('/auth/login', { method: 'POST', body: data }),
   getProfile: () => request('/auth/me'),
   updateProfile: (data) => request('/auth/profile', { method: 'PUT', body: data }),
-  changePassword: (data) => request('/auth/password', { method: 'PUT', body: data })
+  changePassword: (data) => request('/auth/password', { method: 'PUT', body: data }),
+  getBlacklist: () => request('/auth/blacklist')
 };
 
 // Tasks API
@@ -74,7 +75,10 @@ export const tasksApi = {
   delete: (id) => request(`/tasks/${id}`, { method: 'DELETE' }),
   addSubtask: (id, data) => request(`/tasks/${id}/subtasks`, { method: 'POST', body: data }),
   toggleSubtask: (taskId, subId, data) => request(`/tasks/${taskId}/subtasks/${subId}`, { method: 'PUT', body: data }),
-  removeSubtask: (taskId, subId) => request(`/tasks/${taskId}/subtasks/${subId}`, { method: 'DELETE' })
+  removeSubtask: (taskId, subId) => request(`/tasks/${taskId}/subtasks/${subId}`, { method: 'DELETE' }),
+  getTodayQuotas: () => request('/tasks/quotas/today'),
+  getPendingReminders: () => request('/tasks/reminders/pending'),
+  logQuota: (id, minutes) => request(`/tasks/${id}/log-quota`, { method: 'POST', body: { minutes } })
 };
 
 // Sessions API
@@ -86,7 +90,9 @@ export const sessionsApi = {
     const query = new URLSearchParams(params).toString();
     return request(`/sessions${query ? '?' + query : ''}`);
   },
-  stats: (period = '7d') => request(`/sessions/stats?period=${period}`)
+  stats: (period = '7d') => request(`/sessions/stats?period=${period}`),
+  logDistraction: (data) => request('/sessions/distraction', { method: 'POST', body: data }),
+  getRecentDistractions: () => request('/sessions/distractions/recent')
 };
 
 // Analytics API

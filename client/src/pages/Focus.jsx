@@ -4,54 +4,22 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { sessionsApi, tasksApi } from '../utils/api';
 import { 
+  playSound, 
+  sendBrowserNotification, 
+  flashDocumentTitle, 
+  setAmbientSound 
+} from '../utils/notifications';
+import { 
   HiOutlinePlay, 
   HiOutlinePause, 
   HiOutlineRefresh, 
   HiOutlineCheck,
-  HiOutlineBell,
-  HiOutlineSparkles,
-  HiOutlineClipboardList
+  HiOutlineShieldCheck,
+  HiOutlineExclamation,
+  HiOutlineClipboardList,
+  HiOutlineVolumeUp,
+  HiOutlineSparkles
 } from 'react-icons/hi';
-
-// Pleasant chime synthesizer using Web Audio API
-function playChime(type = 'complete') {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-
-    if (type === 'complete') {
-      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-      notes.forEach((freq, idx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
-        gain.gain.setValueAtTime(0.001, ctx.currentTime + idx * 0.12);
-        gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + idx * 0.12 + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + idx * 0.12 + 0.5);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + idx * 0.12);
-        osc.stop(ctx.currentTime + idx * 0.12 + 0.6);
-      });
-    } else {
-      // Gentle tick / start sound
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(440, ctx.currentTime);
-      gain.gain.setValueAtTime(0.05, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.15);
-    }
-  } catch (err) {
-    console.warn('Audio chime unsupported:', err);
-  }
-}
 
 export default function Focus() {
   const { user } = useAuth();
@@ -59,8 +27,8 @@ export default function Focus() {
   const location = useLocation();
 
   const pomoDuration = (user?.settings?.pomoDuration || 25) * 60;
-  const shortBreakDuration = (user?.settings?.shortBreakDuration || 5) * 60;
-  const longBreakDuration = (user?.settings?.longBreakDuration || 15) * 60;
+  const shortBreakDuration = (user?.settings?.shortBreak || 5) * 60;
+  const longBreakDuration = (user?.settings?.longBreak || 15) * 60;
 
   const [mode, setMode] = useState('work'); // 'work' | 'shortBreak' | 'longBreak'
   const [timeLeft, setTimeLeft] = useState(pomoDuration);
@@ -71,6 +39,10 @@ export default function Focus() {
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [sessionStats, setSessionStats] = useState({ totalSessions: 0, totalMinutes: 0 });
   const [completedCount, setCompletedCount] = useState(0);
+  const [ambientMode, setAmbientMode] = useState('none'); // 'none' | 'rain' | 'whitenoise' | 'zen_drone'
+  const [distractionCount, setDistractionCount] = useState(0);
+  const [showInterventionModal, setShowInterventionModal] = useState(false);
+  const [simulatedDistractionSite, setSimulatedDistractionSite] = useState('');
 
   const timerRef = useRef(null);
 
@@ -118,12 +90,25 @@ export default function Focus() {
     clearInterval(timerRef.current);
     setMode(newMode);
     setTimeLeft(getTotalDuration(newMode));
+    // Stop extension focus if switching to break
+    if (newMode !== 'work') {
+      window.dispatchEvent(new CustomEvent('flowstate:focus_stop'));
+    }
   };
+
+  const selectedTask = tasks.find(t => t._id === selectedTaskId);
 
   // Start timer & session
   const startTimer = async () => {
-    playChime('tick');
+    playSound('tick');
     setIsRunning(true);
+
+    const taskTitle = selectedTask?.title || 'Deep Focus Session';
+
+    // Broadcast event to companion Chrome extension
+    window.dispatchEvent(new CustomEvent('flowstate:focus_start', {
+      detail: { taskId: selectedTaskId, taskTitle }
+    }));
 
     if (!currentSessionId && mode === 'work') {
       try {
@@ -146,6 +131,7 @@ export default function Focus() {
   const pauseTimer = () => {
     setIsRunning(false);
     clearInterval(timerRef.current);
+    window.dispatchEvent(new CustomEvent('flowstate:focus_stop'));
   };
 
   // Reset timer
@@ -153,20 +139,29 @@ export default function Focus() {
     setIsRunning(false);
     clearInterval(timerRef.current);
     setTimeLeft(getTotalDuration(mode));
+    window.dispatchEvent(new CustomEvent('flowstate:focus_stop'));
   };
 
-  // End / complete session
+  // Complete / Finish Session
   const completeSession = useCallback(async () => {
-    playChime('complete');
+    playSound('chime');
     setIsRunning(false);
     clearInterval(timerRef.current);
+    window.dispatchEvent(new CustomEvent('flowstate:focus_stop'));
 
     const isWork = mode === 'work';
+    const durationMinutes = Math.round(getTotalDuration(mode) / 60);
+
     addToast(
       isWork 
-        ? '🎉 Focus session finished! Great job. Time for a well-deserved break.'
+        ? '🎉 Focus sprint finished! Great job. Time for a well-deserved break.'
         : '⚡ Break over! Ready to get back into the flow?',
       'success'
+    );
+
+    sendBrowserNotification(
+      isWork ? '🎉 FlowState: Focus Sprint Complete!' : '⚡ FlowState: Break Finished!',
+      { body: isWork ? 'Take a quick breather before your next sprint.' : 'Ready to resume focus?' }
     );
 
     if (currentSessionId) {
@@ -174,7 +169,7 @@ export default function Focus() {
         await sessionsApi.end(currentSessionId, {
           completed: true,
           notes: sessionNotes,
-          actualMinutes: Math.round(getTotalDuration(mode) / 60)
+          actualMinutes: durationMinutes
         });
       } catch (err) {
         console.error('Failed to update session:', err);
@@ -188,10 +183,23 @@ export default function Focus() {
       setCompletedCount(nextCount);
       setSessionStats(prev => ({
         totalSessions: prev.totalSessions + 1,
-        totalMinutes: prev.totalMinutes + Math.round(pomoDuration / 60)
+        totalMinutes: prev.totalMinutes + durationMinutes
       }));
 
-      // If finished 4 cycles, recommend long break
+      // Update local task quota if linked
+      if (selectedTaskId) {
+        setTasks(prev => prev.map(t => {
+          if (t._id === selectedTaskId) {
+            return {
+              ...t,
+              todayFocusMinutes: (t.todayFocusMinutes || 0) + durationMinutes,
+              actualMinutes: (t.actualMinutes || 0) + durationMinutes
+            };
+          }
+          return t;
+        }));
+      }
+
       if (nextCount % 4 === 0) {
         handleModeSwitch('longBreak');
       } else {
@@ -200,7 +208,7 @@ export default function Focus() {
     } else {
       handleModeSwitch('work');
     }
-  }, [mode, currentSessionId, sessionNotes, completedCount, getTotalDuration, pomoDuration, addToast]);
+  }, [mode, currentSessionId, sessionNotes, completedCount, getTotalDuration, addToast, selectedTaskId]);
 
   // Main countdown tick
   useEffect(() => {
@@ -222,6 +230,49 @@ export default function Focus() {
     return () => clearInterval(timerRef.current);
   }, [isRunning, completeSession]);
 
+  // Tab Blur / Wavering Guard
+  // When user switches tabs or wavers away during active work session
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isRunning && mode === 'work') {
+        flashDocumentTitle('⚠️ STAY ON TASK!', 10000);
+      } else if (!document.hidden && isRunning && mode === 'work') {
+        // User returned after wavering
+        setDistractionCount(prev => prev + 1);
+        playSound('warning');
+        addToast('⚠️ Stay on task! Wavering breaks deep focus.', 'warning');
+        sessionsApi.logDistraction({
+          site: 'external_browser_tab',
+          action: 'tab_blur',
+          sessionId: currentSessionId
+        }).catch(() => {});
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isRunning, mode, currentSessionId, addToast]);
+
+  // Ambient sound handler
+  const handleAmbientChange = (type) => {
+    setAmbientMode(type);
+    setAmbientSound(type, 0.25);
+  };
+
+  // Test Blacklist Simulation
+  const handleSimulateDistraction = (site) => {
+    setSimulatedDistractionSite(site);
+    setShowInterventionModal(true);
+    playSound('warning');
+    setDistractionCount(prev => prev + 1);
+    sessionsApi.logDistraction({
+      site,
+      url: `https://${site}`,
+      action: 'blocked',
+      sessionId: currentSessionId
+    }).catch(() => {});
+  };
+
   // Format time mm:ss
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -236,10 +287,22 @@ export default function Focus() {
   const progressRatio = totalDuration > 0 ? (totalDuration - timeLeft) / totalDuration : 0;
   const strokeDashoffset = circumference - (circumference * progressRatio);
 
-  const selectedTask = tasks.find(t => t._id === selectedTaskId);
-
   return (
     <div className="focus-container">
+      {/* Top Banner: Guardian Status */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '580px', marginBottom: '8px' }}>
+        <div className={`guardian-badge-pill ${isRunning && mode === 'work' ? 'guardian-badge-active' : ''}`}>
+          <HiOutlineShieldCheck style={{ fontSize: '16px' }} />
+          <span>{isRunning && mode === 'work' ? 'Focus Guardian Armed & Guarding' : 'Guardian Ready'}</span>
+        </div>
+
+        {distractionCount > 0 && (
+          <span style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <HiOutlineExclamation /> {distractionCount} Wavering Warning{distractionCount > 1 ? 's' : ''} Logged
+          </span>
+        )}
+      </div>
+
       {/* Mode Selector Tabs */}
       <div style={{ display: 'flex', gap: '8px', background: 'var(--glass-bg)', padding: '6px', borderRadius: 'var(--radius-full)', border: '1px solid var(--glass-border)' }}>
         <button
@@ -337,11 +400,32 @@ export default function Focus() {
         </button>
       </div>
 
-      {/* Linked Task Selector */}
-      <div className="timer-task-link glass" style={{ width: '100%', maxWidth: '420px', padding: 'var(--space-md)' }}>
+      {/* Ambient Soundscapes Selector */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', padding: '6px 14px', borderRadius: 'var(--radius-full)', border: '1px solid var(--glass-border)' }}>
+        <HiOutlineVolumeUp style={{ color: 'var(--text-tertiary)' }} />
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Soundscape:</span>
+        {[
+          { key: 'none', label: 'Off' },
+          { key: 'rain', label: '🌧️ Rain' },
+          { key: 'whitenoise', label: '🌊 Noise' },
+          { key: 'zen_drone', label: '🧘 10Hz Alpha' }
+        ].map(item => (
+          <button
+            key={item.key}
+            className={`btn btn-sm ${ambientMode === item.key ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => handleAmbientChange(item.key)}
+            style={{ padding: '3px 10px', fontSize: '11px', borderRadius: 'var(--radius-full)' }}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Linked Task Selector & Daily Quota Widget */}
+      <div className="timer-task-link glass" style={{ width: '100%', maxWidth: '480px', padding: 'var(--space-md)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <span className="linked-task-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <HiOutlineClipboardList /> Linked Task:
+            <HiOutlineClipboardList /> Linked Task & Quota:
           </span>
           {selectedTask && (
             <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>
@@ -359,10 +443,28 @@ export default function Focus() {
           <option value="">-- No specific task (General Focus) --</option>
           {tasks.map((task) => (
             <option key={task._id} value={task._id}>
-              {task.title} {task.deadline ? `(Due ${new Date(task.deadline).toLocaleDateString()})` : ''}
+              {task.title} {task.dailyQuotaMinutes ? `(${task.dailyQuotaMinutes}m daily quota)` : ''}
             </option>
           ))}
         </select>
+
+        {/* Selected Task Daily Quota Bar */}
+        {selectedTask && selectedTask.dailyQuotaMinutes > 0 && (
+          <div style={{ marginTop: '12px', background: 'rgba(255, 255, 255, 0.03)', padding: '10px 14px', borderRadius: 'var(--radius-sm)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '6px' }}>
+              <span className="text-secondary">Today's Focus Quota:</span>
+              <span style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>
+                {selectedTask.todayFocusMinutes || 0} / {selectedTask.dailyQuotaMinutes}m
+              </span>
+            </div>
+            <div className="quota-bar-wrapper">
+              <div 
+                className="quota-bar-fill" 
+                style={{ width: `${Math.min(100, Math.round(((selectedTask.todayFocusMinutes || 0) / selectedTask.dailyQuotaMinutes) * 100))}%` }} 
+              />
+            </div>
+          </div>
+        )}
 
         {/* Quick session reflection note */}
         {isRunning && (
@@ -377,6 +479,32 @@ export default function Focus() {
             />
           </div>
         )}
+      </div>
+
+      {/* Focus Guardian Blacklist Distraction Simulator Test Bench */}
+      <div className="glass" style={{ width: '100%', maxWidth: '480px', padding: '14px 18px', borderRadius: 'var(--radius-md)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 600 }}>
+            <HiOutlineShieldCheck style={{ color: 'var(--danger)' }} />
+            <span>Blacklist Guardian Test Bench</span>
+          </div>
+          <span className="text-xs text-secondary">Evaluator Demo</span>
+        </div>
+        <p className="text-xs text-secondary" style={{ marginBottom: '10px' }}>
+          Test the anti-wavering blacklist detector right here (or install the companion extension in <code>extension/</code>):
+        </p>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {['youtube.com', 'reddit.com', 'twitter.com', 'netflix.com'].map(site => (
+            <button
+              key={site}
+              className="btn btn-sm btn-secondary"
+              onClick={() => handleSimulateDistraction(site)}
+              style={{ fontSize: '11px', padding: '4px 10px' }}
+            >
+              Test {site}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Today's Focus Stats */}
@@ -408,6 +536,51 @@ export default function Focus() {
           </div>
         </div>
       </div>
+
+      {/* Focus Guardian Full-Screen Anti-Wavering Intervention Modal */}
+      {showInterventionModal && (
+        <div className="guardian-modal-overlay" onClick={() => setShowInterventionModal(false)}>
+          <div className="guardian-modal" onClick={e => e.stopPropagation()}>
+            <div className="guardian-shield">🛡️</div>
+            <h2 className="guardian-title">DO NOT WAVER FROM YOUR TASK</h2>
+            <p className="guardian-desc">
+              Focus Guardian detected an attempt to navigate to <span style={{ color: 'var(--danger)', fontWeight: 700 }}>{simulatedDistractionSite}</span> during an active focus session.
+            </p>
+
+            <div className="guardian-task-card">
+              <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--accent-primary)', fontWeight: 700, letterSpacing: '0.8px' }}>
+                Current Scheduled Task
+              </div>
+              <div style={{ fontSize: '1rem', fontWeight: 600, color: '#FFF', marginTop: '4px' }}>
+                {selectedTask?.title || 'Active Deep Work Session'}
+              </div>
+              {selectedTask?.dailyQuotaMinutes > 0 && (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Daily Quota: {selectedTask.todayFocusMinutes || 0} / {selectedTask.dailyQuotaMinutes}m
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button 
+                className="btn btn-primary"
+                onClick={() => {
+                  setShowInterventionModal(false);
+                  addToast('Focus resumed! Keep the streak alive! ⚡', 'success');
+                }}
+              >
+                ⚡ Return to Focus & Resume Sprint
+              </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setShowInterventionModal(false)}
+              >
+                Close Alert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

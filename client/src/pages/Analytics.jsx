@@ -22,7 +22,9 @@ import {
   HiOutlineCheckCircle,
   HiOutlineClock,
   HiOutlineTrendingUp,
-  HiOutlineRefresh
+  HiOutlineRefresh,
+  HiOutlineShieldCheck,
+  HiOutlineLightningBolt
 } from 'react-icons/hi';
 
 const CATEGORY_COLORS = [
@@ -145,7 +147,7 @@ export default function Analytics() {
       </div>
 
       {/* Top Stat Cards */}
-      <div className="stats-grid">
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
         <div className="glass-card stat-card">
           <div className="stat-icon" style={{ background: 'rgba(108, 99, 255, 0.15)', color: 'var(--accent-primary)' }}>
             <HiOutlineFire />
@@ -163,19 +165,35 @@ export default function Analytics() {
         </div>
 
         <div className="glass-card stat-card">
+          <div className="stat-icon" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38BDF8' }}>
+            <HiOutlineLightningBolt />
+          </div>
+          <div className="stat-value">
+            {overview?.dailyQuota?.complianceRate || 0}%
+          </div>
+          <div className="stat-label">
+            Daily Quota Adherence ({overview?.dailyQuota?.loggedMinutes || 0}/{overview?.dailyQuota?.allocatedMinutes || 0}m)
+          </div>
+        </div>
+
+        <div className="glass-card stat-card">
+          <div className="stat-icon" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#F87171' }}>
+            <HiOutlineShieldCheck />
+          </div>
+          <div className="stat-value">
+            {overview?.distractions?.resistanceScore !== undefined ? overview.distractions.resistanceScore : 100}%
+          </div>
+          <div className="stat-label">
+            Distraction Shield ({overview?.distractions?.totalBlocked || 0} Thwarted)
+          </div>
+        </div>
+
+        <div className="glass-card stat-card">
           <div className="stat-icon" style={{ background: 'rgba(52, 211, 153, 0.15)', color: 'var(--success)' }}>
             <HiOutlineCheckCircle />
           </div>
           <div className="stat-value">{overview?.tasks?.completionRate ?? 0}%</div>
           <div className="stat-label">{overview?.tasks?.completed || 0} of {overview?.tasks?.total || 0} Tasks Done</div>
-        </div>
-
-        <div className="glass-card stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(251, 191, 36, 0.15)', color: 'var(--warning)' }}>
-            <HiOutlineTrendingUp />
-          </div>
-          <div className="stat-value">{overview?.tasks?.todayCompleted || 0}</div>
-          <div className="stat-label">Tasks Completed Today</div>
         </div>
       </div>
 
