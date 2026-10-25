@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚠️ FlowState Guardian — Do Not Waver!</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body {
+      background: #090B10;
+      color: #F1F5F9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .blob {
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.25;
+      animation: float 10s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+    .blob-1 { top: -100px; left: -100px; background: #EF4444; }
+    .blob-2 { bottom: -120px; right: -100px; background: #6366F1; }
+    @keyframes float {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(40px, 30px) scale(1.1); }
+    }
+    .card {
+      background: rgba(18, 22, 34, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border-radius: 28px;
+      padding: 48px;
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(239, 68, 68, 0.15);
+      position: relative;
+      z-index: 10;
+    }
+    .shield-badge {
+      width: 84px;
+      height: 84px;
+      margin: 0 auto 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(99, 102, 241, 0.25));
+      border: 2px solid rgba(239, 68, 68, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.35);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 25px rgba(239, 68, 68, 0.3); }
+      50% { transform: scale(1.06); box-shadow: 0 0 40px rgba(239, 68, 68, 0.6); }
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #FFF, #EF4444);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p.subtitle {
+      color: #94A3B8;
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .task-box {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 28px;
+      text-align: left;
+    }
+    .task-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6366F1;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .task-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #F8FAFC;
+    }
+    .blocked-site {
+      display: inline-block;
+      color: #EF4444;
+      font-weight: 700;
+      background: rgba(239, 68, 68, 0.1);
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .btn {
+      padding: 14px 24px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6366F1, #8B5CF6);
+      color: #FFF;
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(99, 102, 241, 0.6);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.07);
+      color: #CBD5E1;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #FFF;
+    }
+    .footer-quote {
+      margin-top: 24px;
+      font-size: 12px;
+      color: #64748B;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <div class="card">
+    <div class="shield-badge">🛡️</div>
+    <h1>DO NOT WAVER FROM YOUR TASK</h1>
+    <p class="subtitle">
+      You attempted to access <span class="blocked-site" id="site-display">this website</span>. FlowState Focus Guardian has intercepted this request because you are in an active focus session.
+    </p>
+
+    <div class="task-box">
+      <div class="task-label">Current Active Focus Task</div>
+      <div class="task-title" id="task-title">Deep Work Session</div>
+    </div>
+
+    <div class="btn-group">
+      <a href="http://localhost:5173/focus" class="btn btn-primary" id="btn-return">
+        ⚡ Return to FlowState & Resume Focus
+      </a>
+      <button class="btn btn-secondary" onclick="window.close()">
+        ✕ Close This Distraction Tab
+      </button>
+    </div>
+
+    <div class="footer-quote">
+      "Discipline is choosing between what you want now and what you want most."
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const site = params.get('site') || 'blacklisted site';
+    const task = params.get('task') || 'Active Goal';
+
+    document.getElementById('site-display').textContent = site;
+    document.getElementById('task-title').textContent = task;
+  </script>
+</body>
+</html>
