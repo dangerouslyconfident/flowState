@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useFlowState } from '../context/FlowStateContext';
 import { HiOutlineViewGrid, HiOutlineClipboardList, HiOutlineClock, HiOutlineChartBar, HiOutlineCog, HiOutlineLogout } from 'react-icons/hi';
 
 const navItems = [
@@ -12,6 +13,7 @@ const navItems = [
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const { isDistracted, brandName, toggleDistraction } = useFlowState();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -24,10 +26,30 @@ export default function Sidebar() {
     : '?';
 
   return (
-    <aside className="sidebar" id="sidebar">
-      <div className="sidebar-header">
-        <div className="sidebar-logo">F</div>
-        <span className="sidebar-brand">FlowState</span>
+    <aside className={`sidebar ${isDistracted ? 'sidebar-distracted' : 'sidebar-in-flow'}`} id="sidebar">
+      <div 
+        className={`sidebar-header ${isDistracted ? 'header-distracted' : 'header-in-flow'}`}
+        onClick={toggleDistraction}
+        title={`Click to test state toggle: currently ${brandName}`}
+        style={{ cursor: 'pointer' }}
+      >
+        <div className={`sidebar-logo ${isDistracted ? 'logo-distracted' : 'logo-in-flow'}`}>
+          {isDistracted ? '!' : '⚡'}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span className={`sidebar-brand ${isDistracted ? 'brand-distracted' : 'brand-in-flow'}`}>
+            {brandName}
+          </span>
+          <span style={{ 
+            fontSize: '10px', 
+            fontWeight: 600, 
+            letterSpacing: '0.04em',
+            color: isDistracted ? '#f43f5e' : 'var(--accent-secondary)',
+            textTransform: 'uppercase'
+          }}>
+            {isDistracted ? '⚠️ Distraction Intercepted' : '● Deep Focus Active'}
+          </span>
+        </div>
       </div>
 
       <nav className="sidebar-nav">

@@ -229,3 +229,14 @@ Major Features:
   5. Deep Work Focus Room with Ambient Synthesized Soundscapes (Rain, White Noise, Alpha Waves)
   6. Productivity Analytics & Distraction Shield Metrics
 ```
+
+---
+
+## 🌐 Deployment & Repository Guides
+
+- 🐙 **GitHub Push & Version Control Guide**: 👉 **[GITHUB_PUSH_GUIDE.md](GITHUB_PUSH_GUIDE.md)**
+- 💻 **Local Development & Setup Guide**: 👉 **[LOCAL_DEPLOYMENT.md](LOCAL_DEPLOYMENT.md)**
+- ☁️ **Online Cloud Deployment Guide (Render, Railway, Vercel, Docker)**: 👉 **[DEPLOYMENT.md](DEPLOYMENT.md)**
+
+
+

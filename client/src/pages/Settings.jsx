@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useFlowState } from '../context/FlowStateContext';
 import { authApi } from '../utils/api';
 import { 
   playSound, 
@@ -18,7 +19,8 @@ import {
   HiOutlineBell,
   HiOutlinePlus,
   HiOutlineExternalLink,
-  HiOutlineSparkles
+  HiOutlineSparkles,
+  HiOutlineLightningBolt
 } from 'react-icons/hi';
 
 const PRESET_BLACKLIST = [
@@ -37,6 +39,7 @@ const PRESET_BLACKLIST = [
 export default function Settings() {
   const { user, updateUser, logout } = useAuth();
   const { addToast } = useToast();
+  const { isDistracted, brandName, triggerDistraction, refocus, toggleDistraction } = useFlowState();
 
   // Profile Form
   const [name, setName] = useState(user?.name || '');
@@ -235,6 +238,103 @@ export default function Settings() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
+        
+        {/* Dynamic inFlowState vs !inFlowState Visual Atmosphere Controller */}
+        <div className="glass-card" style={{ 
+          border: isDistracted ? '1px solid rgba(244, 63, 94, 0.45)' : '1px solid rgba(108, 99, 255, 0.35)',
+          background: isDistracted ? 'rgba(244, 63, 94, 0.05)' : 'rgba(108, 99, 255, 0.04)',
+          transition: 'all 0.5s ease'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+              <div style={{ 
+                width: '42px', 
+                height: '42px', 
+                borderRadius: 'var(--radius-md)', 
+                background: isDistracted ? 'linear-gradient(135deg, #F43F5E, #FB923C)' : 'linear-gradient(135deg, #6C63FF, #00D4FF)', 
+                color: '#FFF', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                fontSize: '1.3rem',
+                boxShadow: isDistracted ? '0 0 20px rgba(244, 63, 94, 0.5)' : '0 0 20px rgba(108, 99, 255, 0.4)'
+              }}>
+                {isDistracted ? '!' : '⚡'}
+              </div>
+              <div>
+                <h2 style={{ fontSize: '1.2rem', margin: 0 }}>
+                  Active Atmosphere: <span style={{ color: isDistracted ? '#F43F5E' : 'var(--accent-secondary)', fontWeight: 800 }}>{brandName}</span>
+                </h2>
+                <p className="text-secondary" style={{ fontSize: '0.8rem', margin: 0 }}>
+                  {isDistracted 
+                    ? 'Cautionary crimson/amber alert theme active: warning that you wavered from focus.' 
+                    : 'Tranquil sapphire/indigo deep focus theme active: steady flow mode enabled.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className={`btn btn-sm ${isDistracted ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={toggleDistraction}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              {isDistracted ? (
+                <>
+                  <HiOutlineLightningBolt />
+                  <span>⚡ Restore inFlowState</span>
+                </>
+              ) : (
+                <>
+                  <span>⚠️ Simulate !inFlowState (Wavering)</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+            gap: '12px',
+            marginTop: '12px' 
+          }}>
+            <div style={{ 
+              padding: '12px', 
+              borderRadius: 'var(--radius-md)', 
+              background: 'rgba(255,255,255,0.03)', 
+              border: '1px solid var(--glass-border)' 
+            }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Brand Status</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '4px', color: isDistracted ? '#F43F5E' : '#38BDF8' }}>
+                {brandName}
+              </div>
+            </div>
+
+            <div style={{ 
+              padding: '12px', 
+              borderRadius: 'var(--radius-md)', 
+              background: 'rgba(255,255,255,0.03)', 
+              border: '1px solid var(--glass-border)' 
+            }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>UI Color Tones</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '4px', color: isDistracted ? '#FB923C' : '#818CF8' }}>
+                {isDistracted ? 'Cautionary Amber-Rose' : 'Tranquil Sapphire-Cyan'}
+              </div>
+            </div>
+
+            <div style={{ 
+              padding: '12px', 
+              borderRadius: 'var(--radius-md)', 
+              background: 'rgba(255,255,255,0.03)', 
+              border: '1px solid var(--glass-border)' 
+            }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Focus Guardian Shield</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '4px', color: isDistracted ? '#F43F5E' : '#34D399' }}>
+                {isDistracted ? '⚠️ Wavering Intercepted' : '🛡️ Protected & Focused'}
+              </div>
+            </div>
+          </div>
+        </div>
         
         {/* 1. Focus Guardian & Blacklist Configuration (Core Requirement) */}
         <div className="glass-card" style={{ border: '1px solid rgba(239, 68, 68, 0.25)' }}>

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { FlowStateProvider, useFlowState } from './context/FlowStateContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -46,6 +47,15 @@ function PublicRoute({ children }) {
   return children;
 }
 
+function AppBackground() {
+  const { isDistracted } = useFlowState();
+  return (
+    <div className={`app-background ${isDistracted ? 'distracted' : 'in-flow'}`}>
+      <div className="blob-extra" />
+    </div>
+  );
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -67,13 +77,14 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ToastProvider>
-          <div className="app-background">
-            <div className="blob-extra" />
-          </div>
-          <AppRoutes />
-        </ToastProvider>
+        <FlowStateProvider>
+          <ToastProvider>
+            <AppBackground />
+            <AppRoutes />
+          </ToastProvider>
+        </FlowStateProvider>
       </AuthProvider>
     </BrowserRouter>
   );
 }
+

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useFlowState } from '../context/FlowStateContext';
 import { sessionsApi, tasksApi } from '../utils/api';
 import { 
   playSound, 
@@ -24,6 +25,7 @@ import {
 export default function Focus() {
   const { user } = useAuth();
   const { addToast } = useToast();
+  const { isDistracted, brandName, triggerDistraction, refocus, toggleDistraction } = useFlowState();
   const location = useLocation();
 
   const pomoDuration = (user?.settings?.pomoDuration || 25) * 60;
@@ -118,6 +120,7 @@ export default function Focus() {
   const startTimer = async () => {
     playSound('tick');
     setIsRunning(true);
+    refocus(); // Ensure tranquil inFlowState
 
     const taskTitle = selectedTask?.title || 'Deep Focus Session';
 
@@ -264,7 +267,7 @@ export default function Focus() {
       } else if (!document.hidden && isRunning && mode === 'work') {
         // User returned after wavering
         setDistractionCount(prev => prev + 1);
-        playSound('warning');
+        triggerDistraction('Switched browser tab away from active sprint');
         addToast('⚠️ Stay on task! Wavering breaks deep focus.', 'warning');
         sessionsApi.logDistraction({
           site: 'external_browser_tab',
@@ -276,7 +279,7 @@ export default function Focus() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isRunning, mode, currentSessionId, addToast]);
+  }, [isRunning, mode, currentSessionId, addToast, triggerDistraction]);
 
   // Ambient sound handler
   const handleAmbientChange = (type) => {
@@ -288,7 +291,7 @@ export default function Focus() {
   const handleSimulateDistraction = (site) => {
     setSimulatedDistractionSite(site);
     setShowInterventionModal(true);
-    playSound('warning');
+    triggerDistraction(`Attempted access to blacklisted site: ${site}`);
     setDistractionCount(prev => prev + 1);
     sessionsApi.logDistraction({
       site,
@@ -314,16 +317,28 @@ export default function Focus() {
 
   return (
     <div className="focus-container">
-      {/* Top Banner: Guardian Status */}
+      {/* Top Banner: Guardian Status & FlowState Indicator */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '580px', marginBottom: '8px' }}>
-        <div className={`guardian-badge-pill ${isRunning && mode === 'work' ? 'guardian-badge-active' : ''}`}>
-          <HiOutlineShieldCheck style={{ fontSize: '16px' }} />
-          <span>{isRunning && mode === 'work' ? 'Focus Guardian Armed & Guarding' : 'Guardian Ready'}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className={`guardian-badge-pill ${isRunning && mode === 'work' ? 'guardian-badge-active' : ''}`}>
+            <HiOutlineShieldCheck style={{ fontSize: '16px' }} />
+            <span>{isRunning && mode === 'work' ? 'Focus Guardian Armed' : 'Guardian Ready'}</span>
+          </div>
+
+          <div 
+            className={`flow-indicator-pill ${isDistracted ? 'pill-distracted' : 'pill-in-flow'}`}
+            onClick={toggleDistraction}
+            title="Click to toggle inFlowState vs !inFlowState test state"
+            style={{ cursor: 'pointer', padding: '4px 10px', fontSize: '0.75rem' }}
+          >
+            <span className={`flow-pulse-dot ${isDistracted ? 'dot-distracted' : 'dot-in-flow'}`} />
+            <span>{brandName}</span>
+          </div>
         </div>
 
         {distractionCount > 0 && (
           <span style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <HiOutlineExclamation /> {distractionCount} Wavering Warning{distractionCount > 1 ? 's' : ''} Logged
+            <HiOutlineExclamation /> {distractionCount} Wavering Logged
           </span>
         )}
       </div>
@@ -591,14 +606,18 @@ export default function Focus() {
                 className="btn btn-primary"
                 onClick={() => {
                   setShowInterventionModal(false);
-                  addToast('Focus resumed! Keep the streak alive! ⚡', 'success');
+                  refocus();
+                  addToast('Focus resumed! Returned to inFlowState ⚡', 'success');
                 }}
               >
-                ⚡ Return to Focus & Resume Sprint
+                ⚡ Return to inFlowState & Resume Sprint
               </button>
               <button 
                 className="btn btn-secondary"
-                onClick={() => setShowInterventionModal(false)}
+                onClick={() => {
+                  setShowInterventionModal(false);
+                  refocus();
+                }}
               >
                 Close Alert
               </button>

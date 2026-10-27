@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -38,7 +38,8 @@ async function request(endpoint, options = {}) {
     config.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, config);
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const response = await fetch(`${API_BASE}${cleanEndpoint}`, config);
   const data = await response.json();
 
   if (!response.ok) {
